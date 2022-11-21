@@ -235,8 +235,8 @@ mean_stats_teams_in_analysis =
                    lubridate::ymd())) |>
   select(-date) |>
   group_by(team) |>
-  summarise_all( ~ round(mean(., na.rm = T),
-                         digits = 2)) |>
+  summarise_all(~ round(mean(., na.rm = T),
+                        digits = 2)) |>
   arrange(team_fifa_rank) |>
   select(team,
          team_fifa_rank,
