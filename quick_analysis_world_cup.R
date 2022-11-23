@@ -175,7 +175,11 @@ data_train =
   data_team_of_interest_home_away |>
   select(-date,
          -home_team_score ,
-         -away_team_score)
+         -away_team_score) |>
+  mutate(
+    diff_fifa_rank = home_team_fifa_rank - away_team_fifa_rank,
+    diff_fifa_points = home_team_total_fifa_points - away_team_total_fifa_points
+  )
 
 train_h2o =
   data_train |>
@@ -217,7 +221,13 @@ var_imp_plot =
 var_imp_plot
 
 home_team_win_drf |>
-  h2o.performance()
+  h2o.performance() 
+
+
+
+
+
+
 
 # Getting last performance metrics ----------------------------------------
 
