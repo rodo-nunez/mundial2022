@@ -9,12 +9,14 @@ library(selectr)
 library(tidyverse)
 library(httr)
 library(xml2)
+library(reticulate)
 
 get_info <- function(link_jugador) {
-  pag_jugador = paste0("https://www.whoscored.com", link_jugador)
+  pag_jugador = paste0("https://www.whoscored.com", link_jugador) 
   remDr$navigate(pag_jugador)
   
-  # remDr$navigate("https://www.whoscored.com/Players/33404/History/Eden-Hazard")
+  print(pag_jugador)
+  Sys.sleep(5)
   
   historia <-
     remDr$findElement(using = 'xpath', "//*[@id='sub-navigation']/ul/li[4]/a")
@@ -108,7 +110,7 @@ get_info <- function(link_jugador) {
 }
 
 df_jugadores =
-  data.table::fread("files/dataset/input/webscrapping/jugadores_copa_2018.csv")
+  data.table::fread("files/dataset/input/webscrapping/jugadores_total.csv")
 
 names(df_jugadores) =
   c("id", "name", "link", "country")
@@ -124,6 +126,22 @@ remDr$navigate(url_principal)
 
 datos_jugadores = 
   df_jugadores |> 
-  head(2) |> 
+  # head(2) |> 
   select(link) |> 
+  unlist() |> 
+  unname() |> 
   map(.f = get_info)
+
+# Save dataset ------------------------------------------------------------
+
+file_name = "files/dataset/intermedia/datos_jugadores"
+
+datos_jugadores |>
+  saveRDS(paste0(file_name, 
+                 ".rds"))
+
+datos_jugadores |> 
+  py_save_object(paste0(file_name, 
+                        ".pickle"), 
+                 pickle = "pickle")
+  
