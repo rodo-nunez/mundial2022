@@ -228,7 +228,7 @@ home_team_win_drf |>
 data_team_mean =
   data_team |>
   filter(date > "2021-01-01") |>
-  filter(team %in% teams_in_analysis) |>
+  # filter(team %in% teams_in_analysis) |>
   select(-c(date,
             team_continent,
             team_result,
@@ -318,35 +318,39 @@ data_team_predicted_mean_score =
            2)
 
 data_team_home_away =
-  data_team_predicted_mean_score |> 
-  mutate(home_away_team = str_c(home_team, away_team),
-         away_home_team = str_c(away_team,home_team)) |> 
-  # mutate(flag_home_away_duplicated = home_away_team == away_home_team) |> 
+  data_team_predicted_mean_score |>
+  mutate(
+    home_away_team = str_c(home_team, away_team),
+    away_home_team = str_c(away_team, home_team)
+  ) |>
+  # mutate(flag_home_away_duplicated = home_away_team == away_home_team) |>
   # View()
-  pivot_longer(cols = 
-                 c(home_away_team,
-                   away_home_team),
-               names_to = "home_away_team",
-               values_to = "value")  
-  
+  pivot_longer(
+    cols =
+      c(home_away_team,
+        away_home_team),
+    names_to = "home_away_team",
+    values_to = "value"
+  )
+
 data_team_home_away_duplicate_value =
-  data_team_home_away |> 
-  select(value) |> 
+  data_team_home_away |>
+  select(value) |>
   duplicated()
 
 data_team_home_away_no_duplicate_value =
-  data_team_home_away[data_team_home_away_duplicate_value,] 
+  data_team_home_away[data_team_home_away_duplicate_value, ]
 
 data_team_home_away_duplicate_home_away =
-  data_team_home_away_no_duplicate_value |> 
-  select(home_team, away_team) |> 
+  data_team_home_away_no_duplicate_value |>
+  select(home_team, away_team) |>
   duplicated()
 
 data_team_home_away_no_duplicate_home_away =
-  data_team_home_away_no_duplicate_value[data_team_home_away_duplicate_home_away,] 
+  data_team_home_away_no_duplicate_value[data_team_home_away_duplicate_home_away, ]
 
 data_team_predicted_summary_mean_prob =
-  data_team_home_away_no_duplicate_home_away |> 
+  data_team_home_away_no_duplicate_home_away |>
   select(home_team,
          away_team,
          mean_win_prob)
@@ -354,7 +358,7 @@ data_team_predicted_summary_mean_prob =
 data_team_predicted_summary_mean_prob_result =
   data_team_predicted_summary_mean_prob |>
   mutate(
-    result = case_when(
+    home_team_result = case_when(
       mean_win_prob < threshold_lose ~ "lose",
       mean_win_prob < threshold_win ~ "draw",
       TRUE ~ "win"
@@ -373,18 +377,21 @@ path_output = "files/dataset/output/"
 file_team_pred = paste0(path_output,
                         "data_team_predicted_summary_mean_prob_result.csv")
 data_team_pred = data.table::fread(file_team_pred)
+
 team_score =
   data_team_pred %>%
   mutate(
     away_mean_win_prob = 1 - mean_win_prob,
     away_result = case_when(
-      result == 'win' ~  'lose',
-      result == 'draw' ~ 'draw',
-      result == 'lose' ~ 'win'
+      home_team_result == 'win' ~  'lose',
+      home_team_result == 'draw' ~ 'draw',
+      home_team_result == 'lose' ~ 'win'
     ),
-    home_score =  case_when(result == 'win' ~ 3,
-                            result == "draw" ~ 1,
-                            result == "lose" ~ 0),
+    home_score =  case_when(
+      home_team_result == 'win' ~ 3,
+      home_team_result == "draw" ~ 1,
+      home_team_result == "lose" ~ 0
+    ),
     away_score = case_when(
       away_result == 'win' ~ 3,
       away_result == "draw" ~ 1,
@@ -397,23 +404,36 @@ team_score =
   )
 
 # Group phase Analysis -----------------------------------------------------
-team_score =
+
+team_final_score =
   team_score %>%
   filter(home_team %in% teams_group_C) %>%
   filter(away_team %in% teams_group_C) %>%
   pivot_longer(cols = c(home_team, away_team),
                values_to = "team_name") %>%
-  mutate(final_score = if_else(name == 'away_team',away_score,home_score),
-         final_cond_score = if_else(name == 'away_team',away_cond_score,home_cond_score))
-team_score %>%
+  mutate(
+    final_score = if_else(name == 'away_team', away_score, home_score),
+    final_cond_score = if_else(name == 'away_team', away_cond_score, home_cond_score)
+  )
+
+team_final_group_phase_score =
+  team_final_score %>%
   group_by(team_name) %>%
-  summarize(total_score = sum(final_score),
-            total_cond_score = sum(final_cond_score))
+  summarize(
+    total_score = sum(final_score),
+    total_cond_score = sum(final_cond_score)
+  )
+
+
+team_final_group_phase_score |>
+  data.table::fwrite("files/dataset/output/team_final_group_phase_score.csv")
+
+
 
 # Getting last performance metrics ----------------------------------------
 
 # last_years_threshold = "2021-01-01"
-# 
+#
 # mean_stats_teams_in_analysis =
 #   data_team |>
 #   select(date,
@@ -433,13 +453,13 @@ team_score %>%
 #          team_fifa_rank,
 #          team_total_fifa_points,
 #          everything())
-# 
+#
 # mean_stats_teams_in_analysis_table =
 #   mean_stats_teams_in_analysis |>
 #   gt::gt()
-# 
+#
 # mean_stats_teams_in_analysis_table
-# 
+#
 # mean_stats_teams_in_analysis_table |>
 #   gt::gtsave(filename = "mean_stats_teams_in_analysis_table.pdf",
 #              path = path_figures)
