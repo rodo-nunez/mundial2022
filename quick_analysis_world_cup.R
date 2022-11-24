@@ -363,39 +363,39 @@ data_team_predicted_summary_mean_prob_result =
 
 # Save data ---------------------------------------------------------------
 
-data_team_predicted_summary |>
+data_team_predicted_summary_mean_prob_result |>
   data.table::fwrite("files/dataset/output/data_team_predicted_summary_mean_prob_result.csv")
 
 # Getting last performance metrics ----------------------------------------
 
-last_years_threshold = "2021-01-01"
-
-mean_stats_teams_in_analysis =
-  data_team |>
-  select(date,
-         team,
-         predictors |>
-           str_remove("home_") |>
-           str_remove("away_")) |>
-  filter(team %in% teams_in_analysis,
-         date > (last_years_threshold |>
-                   lubridate::ymd())) |>
-  select(-date) |>
-  group_by(team) |>
-  summarise_all(~ round(mean(., na.rm = T),
-                        digits = 2)) |>
-  arrange(team_fifa_rank) |>
-  select(team,
-         team_fifa_rank,
-         team_total_fifa_points,
-         everything())
-
-mean_stats_teams_in_analysis_table =
-  mean_stats_teams_in_analysis |>
-  gt::gt()
-
-mean_stats_teams_in_analysis_table
-
-mean_stats_teams_in_analysis_table |>
-  gt::gtsave(filename = "mean_stats_teams_in_analysis_table.pdf",
-             path = path_figures)
+# last_years_threshold = "2021-01-01"
+# 
+# mean_stats_teams_in_analysis =
+#   data_team |>
+#   select(date,
+#          team,
+#          predictors |>
+#            str_remove("home_") |>
+#            str_remove("away_")) |>
+#   filter(team %in% teams_in_analysis,
+#          date > (last_years_threshold |>
+#                    lubridate::ymd())) |>
+#   select(-date) |>
+#   group_by(team) |>
+#   summarise_all(~ round(mean(., na.rm = T),
+#                         digits = 2)) |>
+#   arrange(team_fifa_rank) |>
+#   select(team,
+#          team_fifa_rank,
+#          team_total_fifa_points,
+#          everything())
+# 
+# mean_stats_teams_in_analysis_table =
+#   mean_stats_teams_in_analysis |>
+#   gt::gt()
+# 
+# mean_stats_teams_in_analysis_table
+# 
+# mean_stats_teams_in_analysis_table |>
+#   gt::gtsave(filename = "mean_stats_teams_in_analysis_table.pdf",
+#              path = path_figures)
