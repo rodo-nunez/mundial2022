@@ -366,6 +366,50 @@ data_team_predicted_summary_mean_prob_result =
 data_team_predicted_summary_mean_prob_result |>
   data.table::fwrite("files/dataset/output/data_team_predicted_summary_mean_prob_result.csv")
 
+
+
+#  Expected --------------------------------------------------------------
+path_output = "files/dataset/output/"
+file_team_pred = paste0(path_output,
+                        "data_team_predicted_summary_mean_prob_result.csv")
+data_team_pred = data.table::fread(file_team_pred)
+team_score =
+  data_team_pred %>%
+  mutate(
+    away_mean_win_prob = 1 - mean_win_prob,
+    away_result = case_when(
+      result == 'win' ~  'lose',
+      result == 'draw' ~ 'draw',
+      result == 'lose' ~ 'win'
+    ),
+    home_score =  case_when(result == 'win' ~ 3,
+                            result == "draw" ~ 1,
+                            result == "lose" ~ 0),
+    away_score = case_when(
+      away_result == 'win' ~ 3,
+      away_result == "draw" ~ 1,
+      away_result == "lose" ~ 0
+    )
+  ) %>%
+  mutate(
+    home_cond_score = 3 * mean_win_prob,
+    away_cond_score = 3 * away_mean_win_prob
+  )
+
+# Group phase Analysis -----------------------------------------------------
+team_score =
+  team_score %>%
+  filter(home_team %in% teams_group_C) %>%
+  filter(away_team %in% teams_group_C) %>%
+  pivot_longer(cols = c(home_team, away_team),
+               values_to = "team_name") %>%
+  mutate(final_score = if_else(name == 'away_team',away_score,home_score),
+         final_cond_score = if_else(name == 'away_team',away_cond_score,home_cond_score))
+team_score %>%
+  group_by(team_name) %>%
+  summarize(total_score = sum(final_score),
+            total_cond_score = sum(final_cond_score))
+
 # Getting last performance metrics ----------------------------------------
 
 # last_years_threshold = "2021-01-01"
