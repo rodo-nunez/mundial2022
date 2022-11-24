@@ -221,12 +221,82 @@ var_imp_plot =
 var_imp_plot
 
 home_team_win_drf |>
-  h2o.performance() 
+  h2o.performance()
 
+# Prediction Dataset ------------------------------------------------------
 
+data_team_mean =
+  data_team |>
+  filter(date > "2021-01-01") |>
+  filter(team %in% teams_in_analysis) |>
+  select(-c(date,
+            team_continent,
+            team_result,
+            team_score)) |>
+  group_by(team) |>
+  summarise_all(.funs = mean)
 
+data_team_mean_home =
+  data_team_mean |>
+  rename_at(
+    .vars = vars(starts_with("team")),
+    .funs = function(x) {
+      str_replace_all(string = x,
+                      pattern = "team",
+                      replacement = "home_team")
+    }
+  )
 
+data_team_mean_away =
+  data_team_mean |>
+  rename_at(
+    .vars = vars(starts_with("team")),
+    .funs = function(x) {
+      str_replace_all(string = x,
+                      pattern = "team",
+                      replacement = "away_team")
+    }
+  )
 
+data_team_cross =
+  data_team_mean_home |>
+  crossing(data_team_mean_away) |>
+  filter(home_team != away_team) |>
+  mutate(
+    diff_fifa_rank = home_team_fifa_rank - away_team_fifa_rank,
+    diff_fifa_points = home_team_total_fifa_points - away_team_total_fifa_points
+  )
+
+# Prediction --------------------------------------------------------------
+
+threshold_lose = 0.4
+threshold_win = 0.6
+
+home_team_win_predinction =
+  home_team_win_drf |>
+  h2o::h2o.predict(newdata =
+                     data_team_cross |>
+                     as.h2o()) |>
+  as.data.frame() |>
+  select(home_team_win_prob = TRUE.)
+
+data_team_predicted =
+  data_team_cross |>
+  bind_cols(home_team_win_predinction) |>
+  mutate(result = case_when(home_team_win_prob < threshold_lose ~ "lose",
+                            home_team_win_prob < threshold_win ~ "draw",
+                            TRUE ~ "win"))
+
+data_team_predicted_summary =
+  data_team_predicted |>
+  select(home_team,
+         away_team,
+         home_team_win_prob,
+         result) 
+  # filter(home_team == "Mexico")
+
+data_team_predicted_summary |> 
+  data.table::fwrite("files/dataset/output/data_team_predicted_summary.csv")
 
 
 # Getting last performance metrics ----------------------------------------
@@ -245,8 +315,8 @@ mean_stats_teams_in_analysis =
                    lubridate::ymd())) |>
   select(-date) |>
   group_by(team) |>
-  summarise_all(~ round(mean(., na.rm = T),
-                        digits = 2)) |>
+  summarise_all( ~ round(mean(., na.rm = T),
+                         digits = 2)) |>
   arrange(team_fifa_rank) |>
   select(team,
          team_fifa_rank,
