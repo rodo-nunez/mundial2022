@@ -7,7 +7,7 @@ source("init.R")
 
 source("preprocessing/a01_read_data_and_EDA.R")
 
-source("models/b01_training_set_model_performance.R")
+source("models/b02_nuevo_modelo")
 
 source("execution/c01_prediction.R")
 
